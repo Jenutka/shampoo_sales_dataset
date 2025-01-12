@@ -9,7 +9,9 @@
 - [Představení datasetu](#představení-datasetu)
 - [Načtení a transformace dat](#načtení-a-transformace-dat)
 - [Analýza dat](#analýza-dat)
-- [Diferenciace dat](#diferenciace-dat)
+- [Lineární regrese](#lineární-regrese)
+- [Kvadratická regrese](#kvadratická-regrese)
+- [Model ARIMA](#model-arima)
 
 
 ## Úvod do problematiky 
@@ -134,7 +136,7 @@ print('p-value:', result[1])
 
 ### Základní Vizualizace dat
 
-Nyní si pomocí modulu `Matplotlib` vygenerujeme první vizualizaci dat, která nám poskytne daleko lepší představu o tom, jak data celkově vypadají. Zároveň si pomocí funkce `regplot()` proložíme trendovou linii dat do grafu (modře). V grafu vidíme, že trend je vzestupný a vcelku dobře vystihuje okolní data.
+Nyní si pomocí modulu `Matplotlib` vygenerujeme první vizualizaci dat, která nám poskytne daleko lepší představu o tom, jak data celkově vypadají. Zároveň si pomocí funkce `regplot()` proložíme trendovou linii (lineární regrese) dat do grafu (modře). V grafu vidíme, že trend je vzestupný a vcelku dobře vystihuje okolní data. Kvadratická regrese by ale mohla chování dat kopírovat přesněji. Zkusím tedy kvadratickou regresi v pozdějším kroku namodelovat.
 
 ```Python
 fig, ax = plt.subplots()
@@ -160,7 +162,12 @@ Na základě předchozího grafu je zřejmé, že data prodejů vykazují jistou
 
 ![year overlapping of shampoo sales dataset](./img/year_plot.png)
 
+## Lineární regrese
 
-## Diferenciace dat
+## Kvadratická regrese
 
-Na základě výsledků z analýzy dat se tedy musíme pokusit odstranit z dat šum a  data stacionarizovat, abychom měli dobrý základ pro prediktivní model.
+## Model ARIMA
+
+Na základě výsledků z analýzy dat musíme data stacionarizovat, abychom měli dobrý základ pro prediktivní model ARIMA.
+
+Dále namodeluji kvadratickou regresi. K tomu použiji seasonal_decompose(df, model='additive'), který mi vytvoří time dummy a tu pak umocním ^2
