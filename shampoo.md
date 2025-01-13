@@ -162,7 +162,49 @@ Na základě předchozího grafu je zřejmé, že data prodejů vykazují jistou
 
 ![year overlapping of shampoo sales dataset](./img/year_plot.png)
 
+## Příprava dat pro prediktivní model
+
+Abychom mohli dála na datech natrénovat a následně otestovat prediktivní model, musíme si data rozdělit na trénovací a testovací část. Pro trénink modelu použijeme první dva roky prodejů (první 2/3) a pro testování poslední rok prodejů (poslední 1/3). Pro rozdělení datasetu použijeme použijeme funkci `train_test_split()` z knihovny `scikit-learn`.
+
+```Python
+# Training data
+X = df.loc[:, ['Month']] # features
+y = df.loc[:, 'Sales'] # target
+
+X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=0.33, shuffle=False)
+```
+
 ## Lineární regrese
+
+Pomocí modelu lineární regrese natrénujeme na trénovacích datech prediktivní model.
+
+```Python
+# Train model
+model = LinearRegression()
+model.fit(X_train,y_train)
+```
+
+Nyní provedeme samotnou predikci hodnot prodeje pomocí modelu lineární regrese ve stejném rozsahu jako naše testovací data.
+
+```Python
+y_test_pred = pd.Series(model.predict(X_test), index=X_test.index)
+```
+
+Jako hodnotící kritérium zvolíme metriku `MAE` (Mean Average Error)
+
+```Python
+from sklearn.metrics import mean_absolute_error
+
+mae = mean_absolute_error(y_test, y_pred)
+print('Mean Absolute Error (MAE):', mae)
+```
+
+*Mean Absolute Error (MAE): `132.71`*
+
+
+![predikce lineární regrese](./img/linear_regression_prediction.png)
+
+Lineární regrese je nejjednodušší model pro predikci časové řady, zároveň je ale vidět, že v tomto případě nejsou predikce odpovídající hodnotám v testovacím rozsahu. Tento prediktivní model již podle vizuální kontroly hodnotíme jako nevhodný. Zároveň průměrná absolutní chyba je také dosti velká.
 
 ## Kvadratická regrese
 
