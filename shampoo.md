@@ -208,6 +208,60 @@ Lineární regrese je nejjednodušší model pro predikci časové řady, zárov
 
 ## Kvadratická regrese
 
+Jako další sloupec přidáme do datasetu pomocí deterministického procesu `Determinstic_process` časový polynom druhého řádu, na kterém poté natrénujeme model pro lineární regresi.
+
+```Python
+dp = DeterministicProcess(
+    index=X.index,
+    constant=True,
+    order=2,
+    drop=True,
+)
+
+X = dp.in_sample()
+
+X.head()
+```
+
+| Month   | const | trend | trend_squared |
+|---------|-------|-------|---------------|
+| 1981-01 | 1.0   | 1.0   | 1.0           |
+| 1981-02 | 1.0   | 2.0   | 4.0           |
+| 1981-03 | 1.0   | 3.0   | 9.0           |
+| 1981-04 | 1.0   | 4.0   | 16.0          |
+| 1981-05 | 1.0   | 5.0   | 25.0          |
+
+Po rozdělení dat na tréninkovou a testovací část na těchto datech natrénujeme náš model.
+
+```Python
+X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=0.33, shuffle=False)
+
+model = LinearRegression(fit_intercept=False)
+model.fit(X_train, y_train)
+```
+
+Na natrénovaném modelu odvodíme naší predikci.
+
+```Python
+y_train_pred = pd.Series(model.predict(X_train), index=X_train.index)
+
+y_test_pred = pd.Series(model.predict(X_test), index=X_test.index)
+```
+
+```Python
+from sklearn.metrics import mean_absolute_error
+
+mae = mean_absolute_error(y_test, y_pred)
+print('Mean Absolute Error (MAE):', mae)
+```
+
+*Mean Absolute Error (MAE): `61.62`*
+
+![predikce kvadratické regrese](./img/Quadratic_regression_prediction.png)
+
+Tato predikce již vypadá velice dobře. MAE je oproti lineární regresi prvního řádu poloviční. Tento trend využijeme dále pro stacionarizaci dat, která je nutná pro použití prediktivního modelu ARIMA.
+
+
 ## Model ARIMA
 
 Na základě výsledků z analýzy dat musíme data stacionarizovat, abychom měli dobrý základ pro prediktivní model ARIMA.
