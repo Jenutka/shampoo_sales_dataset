@@ -264,6 +264,127 @@ Tato predikce již vypadá velice dobře. MAE je oproti lineární regresi prvn�
 
 ## Model ARIMA
 
-Na základě výsledků z analýzy dat musíme data stacionarizovat, abychom měli dobrý základ pro prediktivní model ARIMA.
+Z předchozí analýzy dat víme, že data nejsou stacionární. Abychom mohli použít prediktivní model ARIMA, musíme data nejprve stacionarizovat. Pro stacionarizaci použijeme metodu diferenciace, která má za úkol odstranit z dat trend. Při použití této metody musíme pamatovat na to, abychom predikovaná data převedli zpět do stavu před diferenciací.
 
-Dále namodeluji kvadratickou regresi. K tomu použiji seasonal_decompose(df, model='additive'), který mi vytvoří time dummy a tu pak umocním ^2
+```python
+df['Sales_diff'] = df['Sales'].diff().dropna()
+```
+
+Nyní znovu odvodíme `ADF` číslo.
+
+```python
+result = adfuller(df['Sales_diff'].dropna())
+print('ADF Statistic:', result[0])
+print('p-value:', result[1])
+```
+
+
+- **ADF Statistic:** -7.249074055553854
+- **p-hodnota:** 1.7998574141687034e-10
+
+ADF hodnota je záporná a p-hodnota se blíží nule. Naše data můžeme považovat za stacionarizovaná.
+
+Pro odhad parametrů pro model ARIMA vygenerujeme grafy pro `auto-korelační funkci` a `parciální auto-korelaci`.
+
+```python
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+
+fig, ax = plt.subplots(2, 1, figsize=(12, 8))
+plot_acf(df['Sales_diff'].dropna(), ax=ax[0])
+plot_pacf(df['Sales_diff'].dropna(), ax=ax[1])
+plt.show()
+```
+
+![ACF a PACF](./img/ACF_PACF.png)
+
+Pro model ARIMA určujeme 3 parametry `p`, `d` a `q`. Z grafů můžeme zkusit odhadnout hodnotu `p=5` (ACF má nízkou hodnotu a PACF má hodnotu zároveň vyšší), `q=8` (PACF se blíží nule a zároveň ACF má vyšší hodnotu). Parametr `d=1` odvodíme z použití jednoho stupně diferenciace.
+
+Nyní zkusíme na základě hodnot `p=5`, `d=1` a `q=8` odvodit predikci pro náš datový set s použitím modelu ARIMA.
+
+```Python
+from statsmodels.tsa.arima.model import ARIMA
+# Training data
+train, test = train_test_split(df, test_size=0.33, shuffle=False)
+
+# Train model
+model = ARIMA(train['Sales_diff'].dropna(), order=(5, 1, 8))
+model_fit = model.fit()
+print(model_fit.summary())
+```
+
+Zde je sumarizace natrénovaného modelu:
+
+```
+                               SARIMAX Results                                
+==============================================================================
+Dep. Variable:             Sales_diff   No. Observations:                   23
+Model:                 ARIMA(5, 1, 8)   Log Likelihood                -128.144
+Date:                Sun, 26 Jan 2025   AIC                            284.288
+Time:                        14:54:20   BIC                            299.563
+Sample:                    02-28-1981   HQIC                           287.886
+                         - 12-31-1982                                         
+Covariance Type:                  opg                                         
+==============================================================================
+                 coef    std err          z      P>|z|      [0.025      0.975]
+------------------------------------------------------------------------------
+ar.L1          2.3665      8.253      0.287      0.774     -13.809      18.542
+ar.L2         -1.4165      9.425     -0.150      0.881     -19.890      17.057
+ar.L3         -1.2639      8.811     -0.143      0.886     -18.533      16.005
+ar.L4          2.2353      3.908      0.572      0.567      -5.425       9.895
+ar.L5         -0.9308     18.625     -0.050      0.960     -37.435      35.573
+ma.L1         -4.1046     33.117     -0.124      0.901     -69.013      60.803
+ma.L2          6.6005     39.981      0.165      0.869     -71.762      84.963
+ma.L3         -4.0682     15.862     -0.256      0.798     -35.157      27.020
+ma.L4         -1.8851     17.444     -0.108      0.914     -36.076      32.306
+ma.L5          4.9126     13.313      0.369      0.712     -21.181      31.006
+ma.L6         -3.3480     10.086     -0.332      0.740     -23.117      16.421
+ma.L7          0.9853      9.400      0.105      0.917     -17.438      19.409
+ma.L8         -0.0907      1.274     -0.071      0.943      -2.587       2.406
+sigma2      8653.3194      0.003   2.79e+06      0.000    8653.313    8653.325
+===================================================================================
+Ljung-Box (L1) (Q):                   0.28   Jarque-Bera (JB):                 1.54
+Prob(Q):                              0.60   Prob(JB):                         0.46
+Heteroskedasticity (H):               1.47   Skew:                            -0.03
+Prob(H) (two-sided):                  0.62   Kurtosis:                         1.70
+===================================================================================
+```
+
+Nyní provedeme samotnou předpověď nastavenou na následujících 12 kroků.
+
+```Python
+forecast = model_fit.forecast(steps=len(test))
+```
+
+Abychom získali předpověď v původních hodnotách našeho datasetu, musíme výstup modelu vrátit zpět do stavu před diferenciací.
+
+```Python
+forecast_diff_reverted = forecast.cumsum() + train['Sales'].iloc[-1]
+```
+
+Pro lepší představu predikcí našeho modelu si výsledky vizualizujeme pomocí grafu.
+
+```Python
+ax = df['Sales'].plot(**plot_params)
+ax = train['Sales'].plot(ax=ax, linewidth=3, color='blue', label='train')
+ax = forecast_diff_reverted.plot(ax=ax, linewidth=3, color='red', label='predicted')
+ax.set_title('ARIMA Prediction of Shampoo Sales')
+ax.legend();
+plt.show()
+```
+
+![ARIMA_518](./img/ARIMA_518.png)
+
+Výsledek vypadá uspokojivě, nás ale zajímá především metrika `MAE` pro porovnání s předchozími předpověďmi.
+
+```Python
+mae = mean_absolute_error(y_test, forecast_diff_reverted)
+print('Mean Absolute Error (MAE):', mae)
+```
+
+*Mean Absolute Error (MAE): `62.75`*
+
+Tento výsledek je téměř totožný s kvadratickou regresí. Nyní se tedy pokusíme model vyladit pomocí hyperparamtrů `p`, `d` a `q`, abychom zjistili, zda se nenabízí lepší řešení, které by překonalo alespoň kvadratickou regresi.
+
+Pro prozkoumání různých variant paramtetrů použijeme techniku `GridSearch`, pro kterou si napíšeme vlastní funkci.
+
+opravit první diferenciaci v původním ARIMA modelu d=0, následně udělat gridsearch s využitím automatické diferenciace a poté zjistit pomocí `get_forecast()` CI - interval spolehlivosti .
