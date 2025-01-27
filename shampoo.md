@@ -301,51 +301,53 @@ Pro model ARIMA určujeme 3 parametry `p`, `d` a `q`. Z grafů můžeme zkusit o
 
 Nyní zkusíme na základě hodnot `p=5`, `d=1` a `q=8` odvodit predikci pro náš datový set s použitím modelu ARIMA.
 
+Samotný model ARIMA umí data sám diferenciovat, použijeme tedy původní nediferenciovaná data, s tím že 1. stupeň diferenciace je již stacionární. V dalším zkoumání zkusíme i další stupeň diferenciace, ale zde už je třeba dát pozor na overfitting natrénovaného modelu.
+
 ```Python
 from statsmodels.tsa.arima.model import ARIMA
 # Training data
 train, test = train_test_split(df, test_size=0.33, shuffle=False)
 
 # Train model
-model = ARIMA(train['Sales_diff'].dropna(), order=(5, 1, 8))
+model = ARIMA(train['Sales'].dropna(), order=(5, 1, 8))
 model_fit = model.fit()
 print(model_fit.summary())
 ```
 
 Zde je sumarizace natrénovaného modelu:
 
-```
+```Python
                                SARIMAX Results                                
 ==============================================================================
-Dep. Variable:             Sales_diff   No. Observations:                   23
-Model:                 ARIMA(5, 1, 8)   Log Likelihood                -128.144
-Date:                Sun, 26 Jan 2025   AIC                            284.288
-Time:                        14:54:20   BIC                            299.563
-Sample:                    02-28-1981   HQIC                           287.886
+Dep. Variable:                  Sales   No. Observations:                   24
+Model:                 ARIMA(5, 1, 8)   Log Likelihood                -126.791
+Date:                Mon, 27 Jan 2025   AIC                            281.582
+Time:                        20:19:34   BIC                            297.479
+Sample:                    01-31-1981   HQIC                           285.580
                          - 12-31-1982                                         
 Covariance Type:                  opg                                         
 ==============================================================================
                  coef    std err          z      P>|z|      [0.025      0.975]
 ------------------------------------------------------------------------------
-ar.L1          2.3665      8.253      0.287      0.774     -13.809      18.542
-ar.L2         -1.4165      9.425     -0.150      0.881     -19.890      17.057
-ar.L3         -1.2639      8.811     -0.143      0.886     -18.533      16.005
-ar.L4          2.2353      3.908      0.572      0.567      -5.425       9.895
-ar.L5         -0.9308     18.625     -0.050      0.960     -37.435      35.573
-ma.L1         -4.1046     33.117     -0.124      0.901     -69.013      60.803
-ma.L2          6.6005     39.981      0.165      0.869     -71.762      84.963
-ma.L3         -4.0682     15.862     -0.256      0.798     -35.157      27.020
-ma.L4         -1.8851     17.444     -0.108      0.914     -36.076      32.306
-ma.L5          4.9126     13.313      0.369      0.712     -21.181      31.006
-ma.L6         -3.3480     10.086     -0.332      0.740     -23.117      16.421
-ma.L7          0.9853      9.400      0.105      0.917     -17.438      19.409
-ma.L8         -0.0907      1.274     -0.071      0.943      -2.587       2.406
-sigma2      8653.3194      0.003   2.79e+06      0.000    8653.313    8653.325
+ar.L1         -0.7779      5.229     -0.149      0.882     -11.027       9.471
+ar.L2         -1.5248      3.926     -0.388      0.698      -9.219       6.170
+ar.L3         -1.4983      8.435     -0.178      0.859     -18.030      15.034
+ar.L4         -0.7561      4.556     -0.166      0.868      -9.686       8.174
+ar.L5         -0.9145      7.942     -0.115      0.908     -16.480      14.651
+ma.L1         -0.1379     23.921     -0.006      0.995     -47.021      46.746
+ma.L2          1.3387     25.650      0.052      0.958     -48.934      51.611
+ma.L3          0.4792     54.162      0.009      0.993    -105.677     106.635
+ma.L4          0.1753     46.053      0.004      0.997     -90.087      90.438
+ma.L5          0.9696     53.352      0.018      0.986    -103.598     105.537
+ma.L6         -0.5183     30.852     -0.017      0.987     -60.988      59.951
+ma.L7          0.4704     13.927      0.034      0.973     -26.826      27.766
+ma.L8         -0.1919      4.401     -0.044      0.965      -8.817       8.433
+sigma2      5026.2250   8.67e+04      0.058      0.954   -1.65e+05    1.75e+05
 ===================================================================================
-Ljung-Box (L1) (Q):                   0.28   Jarque-Bera (JB):                 1.54
-Prob(Q):                              0.60   Prob(JB):                         0.46
-Heteroskedasticity (H):               1.47   Skew:                            -0.03
-Prob(H) (two-sided):                  0.62   Kurtosis:                         1.70
+Ljung-Box (L1) (Q):                   0.27   Jarque-Bera (JB):                 0.93
+Prob(Q):                              0.61   Prob(JB):                         0.63
+Heteroskedasticity (H):               0.87   Skew:                            -0.18
+Prob(H) (two-sided):                  0.84   Kurtosis:                         2.09
 ===================================================================================
 ```
 
@@ -358,7 +360,7 @@ forecast = model_fit.forecast(steps=len(test))
 Abychom získali předpověď v původních hodnotách našeho datasetu, musíme výstup modelu vrátit zpět do stavu před diferenciací.
 
 ```Python
-forecast_diff_reverted = forecast.cumsum() + train['Sales'].iloc[-1]
+forecast = forecast.cumsum() + train['Sales'].iloc[-1]
 ```
 
 Pro lepší představu predikcí našeho modelu si výsledky vizualizujeme pomocí grafu.
@@ -366,7 +368,7 @@ Pro lepší představu predikcí našeho modelu si výsledky vizualizujeme pomoc
 ```Python
 ax = df['Sales'].plot(**plot_params)
 ax = train['Sales'].plot(ax=ax, linewidth=3, color='blue', label='train')
-ax = forecast_diff_reverted.plot(ax=ax, linewidth=3, color='red', label='predicted')
+ax = forecast.plot(ax=ax, linewidth=3, color='red', label='predicted')
 ax.set_title('ARIMA Prediction of Shampoo Sales')
 ax.legend();
 plt.show()
@@ -377,14 +379,180 @@ plt.show()
 Výsledek vypadá uspokojivě, nás ale zajímá především metrika `MAE` pro porovnání s předchozími předpověďmi.
 
 ```Python
-mae = mean_absolute_error(y_test, forecast_diff_reverted)
+mae = mean_absolute_error(y_test, forecast)
 print('Mean Absolute Error (MAE):', mae)
 ```
 
-*Mean Absolute Error (MAE): `62.75`*
+*Mean Absolute Error (MAE): `130.98`*
 
-Tento výsledek je téměř totožný s kvadratickou regresí. Nyní se tedy pokusíme model vyladit pomocí hyperparamtrů `p`, `d` a `q`, abychom zjistili, zda se nenabízí lepší řešení, které by překonalo alespoň kvadratickou regresi.
+Tento výsledek je téměř totožný s lineární regresí. Nyní se tedy pokusíme model vyladit pomocí hyperparamtrů `p`, `d` a `q`, abychom zjistili, zda se nenabízí lepší řešení, které by překonalo alespoň kvadratickou regresi.
 
 Pro prozkoumání různých variant paramtetrů použijeme techniku `GridSearch`, pro kterou si napíšeme vlastní funkci.
 
-opravit první diferenciaci v původním ARIMA modelu d=0, následně udělat gridsearch s využitím automatické diferenciace a poté zjistit pomocí `get_forecast()` CI - interval spolehlivosti .
+```Python
+import itertools
+import warnings
+
+warnings.filterwarnings("ignore")
+
+# Definování rozsahu pro parametry p a q, s d = 2
+p = q = range(0, 10)  # Změna rozsahu podle potřeby
+pdq = [(x[0], 2, x[1]) for x in list(itertools.product(p, q))]
+print(pdq)
+
+# Funkce pro grid search s MAE
+def arima_grid_search(train, test, pdq):
+    best_mae = np.inf
+    best_order = None
+    best_model = None
+    
+    for order in pdq:
+        try:
+            model = ARIMA(train['Sales'].dropna(), order=order)
+            model_fit = model.fit()
+            forecast = model_fit.forecast(steps=len(test))
+            
+            # Výpočet MAE
+            mae = mean_absolute_error(test, forecast)
+            print(mae)
+            if mae < best_mae:
+                best_mae = mae
+                best_order = order
+                best_model = model_fit
+        except:
+            continue
+    return best_order, best_model
+
+# Provedení grid search
+best_order, best_model = arima_grid_search(train, y_test, pdq)
+print(f"Best order: {best_order}")
+print(best_model.summary())
+```
+
+`Best order: (7, 2, 3)`
+
+Nakonec nejlépe dopadla diferenciace druhého řádu. Natrénujeme tedy finální model s těmito parametry a změříme chybu.
+
+```Python
+# Train model
+model = ARIMA(train['Sales'].dropna(), order=(7, 2, 3))
+model_fit = model.fit()
+print(model_fit.summary())
+```
+
+```Python
+                               SARIMAX Results                                
+==============================================================================
+Dep. Variable:                  Sales   No. Observations:                   24
+Model:                 ARIMA(7, 2, 3)   Log Likelihood                -120.348
+Date:                Mon, 27 Jan 2025   AIC                            262.696
+Time:                        20:16:18   BIC                            274.698
+Sample:                    01-31-1981   HQIC                           265.523
+                         - 12-31-1982                                         
+Covariance Type:                  opg                                         
+==============================================================================
+                 coef    std err          z      P>|z|      [0.025      0.975]
+------------------------------------------------------------------------------
+ar.L1         -2.3750      2.548     -0.932      0.351      -7.369       2.619
+ar.L2         -3.3425      4.223     -0.792      0.429     -11.619       4.934
+ar.L3         -4.1924      5.693     -0.736      0.462     -15.351       6.966
+ar.L4         -3.9592      6.466     -0.612      0.540     -16.633       8.715
+ar.L5         -2.8771      5.252     -0.548      0.584     -13.170       7.416
+ar.L6         -1.6497      3.529     -0.467      0.640      -8.567       5.267
+ar.L7         -0.4764      1.576     -0.302      0.762      -3.565       2.612
+ma.L1          0.3571      5.082      0.070      0.944      -9.604      10.318
+ma.L2          0.4132      7.220      0.057      0.954     -13.739      14.565
+ma.L3          0.9266      7.389      0.125      0.900     -13.556      15.409
+sigma2      2404.4993   1.95e+04      0.123      0.902   -3.59e+04    4.07e+04
+===================================================================================
+Ljung-Box (L1) (Q):                   0.01   Jarque-Bera (JB):                 1.49
+Prob(Q):                              0.90   Prob(JB):                         0.48
+Heteroskedasticity (H):               0.53   Skew:                            -0.61
+Prob(H) (two-sided):                  0.42   Kurtosis:                         2.64
+===================================================================================
+```
+
+Odvodíme předpověď pro následujících 12 měsíců.
+
+```Python
+forecast = model_fit.forecast(steps=len(test))
+```
+
+Opět provedeme vizualizaci naší předpovědi.
+
+```Python
+ax = df['Sales'].plot(**plot_params)
+ax = train['Sales'].plot(ax=ax, linewidth=3, color='blue', label='train')
+ax = forecast.plot(ax=ax, linewidth=3, color='red', label='predicted')
+ax.set_title('ARIMA Prediction of Shampoo Sales')
+ax.legend();
+plt.show()
+```
+
+![ARIMA_723](./img/ARIMA_723.png)
+
+Změříme `MAE`:
+
+```Python
+mae = mean_absolute_error(y_test, forecast)
+print('Mean Absolute Error (MAE):', mae)
+```
+
+*Mean Absolute Error (MAE): `52.68`*
+
+Toto je mnohem lepší výsledek než u kvadratické regrese. Tento model budeme tedy brát jako finální.
+
+## CI - Confidence intervals
+
+Abychom mohli prezentovat prediktivní výsledky našeho modelu, musím zjistit průběh jeho CI - intervalů spolehlivosti (Confidence intervals). Pomocí těchto intervalů můžeme určit, že máme 95% jistotu, že skutečná hodnota, kterou se snažíme odhadnout, leží v tomto intervalu. Tento interval je ovlivněn rozptylem dat.
+
+Pro získání intervalu použijeme metodu `get_forecast`.
+
+```Python
+forecast_get = model_fit.get_forecast(steps=len(test))
+forecast_index = test.index
+
+pred_mean = forecast_get.predicted_mean
+pred_ci = forecast_get.conf_int()
+```
+
+```Python
+print(pred_ci)
+```
+
+```Python
+        lower Sales  upper Sales
+1983-01   266.472265   466.452863
+1983-02   350.097152   549.051281
+1983-03   266.880831   518.317368
+1983-04   257.466822   543.868995
+1983-05   236.059903   602.071676
+1983-06   254.614220   653.008293
+1983-07   270.264362   738.001277
+1983-08   223.931610   762.741397
+1983-09   181.996153   782.173822
+1983-10   135.813548   815.969853
+1983-11   179.046719   938.367940
+1983-12   157.113814  1003.693186
+```
+
+Nyní interval spolehlivosti vizualizujeme v grafu společně s naší předpovědí.
+
+```Python
+ax = df['Sales'].plot(**plot_params)
+ax = train['Sales'].plot(ax=ax, linewidth=3, color='blue', label='train')
+ax = forecast.plot(ax=ax, linewidth=3, color='red', label='predicted, 95% CI')
+ax.fill_between(
+	test.index, pred_ci['lower Sales'], pred_ci['upper Sales'], color='r', alpha=.15)
+ax.set_title('ARIMA Prediction of Shampoo Sales')
+ax.legend(loc='upper left');
+plt.show()
+```
+
+![ARIMA_723_CI](./img/ARIMA_723_CI.png)
+
+Tím je naše práce hotova. Výhodou modelu ARIMA oproti klasické regresi je právě získání intervalů spolehlivosti. Bylo by chybou interpretovat predikci jako konkrétní hodnoty. Vždy se budeme pohybovat v rámci intervalů spolehlivosti.
+
+## Co dál?
+
+Jako další model můžeme vyzkoušet `Holt-Winters`.
